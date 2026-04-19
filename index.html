@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kitty Finder Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --cream:#FAF7F2;--sand:#F0EAE0;--gold:#C9963A;--golddim:#E8C87A;
+  --rust:#C0563A;--ink:#1A1410;--muted:#6B5E52;--card:#FFFFFF;
+  --border:#E0D8CE;--radius:16px;--shadow:0 4px 24px rgba(26,20,16,0.10);
+  --green:#2D7A4F;--green-light:#EBF7F1;--green-border:#A8DFC4;
+}
+
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink)}
+
+/* LANDING */
+#landing{
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  background:var(--ink);position:relative;overflow:hidden;
+}
+#landing::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 80%,rgba(201,150,58,.18) 0%,transparent 70%),
+    radial-gradient(ellipse 50% 60% at 80% 20%,rgba(192,86,58,.15) 0%,transparent 70%);
+}
+.landing-inner{position:relative;text-align:center;padding:40px 24px;animation:fadeUp .8s ease both}
+.landing-emoji{font-size:64px;display:block;margin-bottom:24px;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.landing-title{
+  font-family:'Playfair Display',serif;font-size:clamp(40px,8vw,72px);
+  font-weight:900;color:var(--cream);line-height:1.05;letter-spacing:-1px;margin-bottom:12px;
+}
+.landing-title span{color:var(--golddim)}
+.landing-sub{font-size:16px;color:rgba(250,247,242,.55);margin-bottom:40px;font-weight:300}
+.btn-enter{
+  background:var(--gold);color:var(--ink);border:none;padding:16px 40px;
+  border-radius:100px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;
+  cursor:pointer;letter-spacing:.04em;transition:transform .15s,box-shadow .15s,background .15s;
+}
+.btn-enter:hover{background:var(--golddim);transform:translateY(-2px);box-shadow:0 8px 28px rgba(201,150,58,.35)}
+
+/* APP */
+#app{display:none;min-height:100vh;background:var(--cream)}
+
+/* TOPBAR */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(250,247,242,.9);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;padding:14px 20px;
+}
+.topbar-logo{
+  font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--ink);
+  display:flex;align-items:center;gap:8px;
+}
+#backBtn{
+  display:none;align-items:center;gap:6px;background:none;
+  border:1px solid var(--border);border-radius:100px;padding:6px 14px;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--muted);
+  cursor:pointer;transition:background .15s,color .15s;
+}
+#backBtn:hover{background:var(--sand);color:var(--ink)}
+#backBtn.visible{display:flex}
+
+/* SECTIONS */
+.section{display:none;padding:24px 20px;animation:fadeUp .35s ease both}
+.section.active{display:block}
+
+/* HOME */
+.home-greeting{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;margin-bottom:4px}
+.home-sub{font-size:14px;color:var(--muted);margin-bottom:28px}
+.action-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.action-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:22px 18px;cursor:pointer;
+  transition:transform .15s,box-shadow .15s,border-color .15s;text-align:left;
+}
+.action-card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--golddim)}
+.action-card:active{transform:translateY(0)}
+.action-icon{font-size:28px;margin-bottom:10px;display:block}
+.action-label{font-size:15px;font-weight:500;color:var(--ink);margin-bottom:3px}
+.action-desc{font-size:12px;color:var(--muted)}
+.action-card.wide{grid-column:1 / -1}
+
+/* SECTION HEADER */
+.section-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;margin-bottom:4px}
+.section-sub{font-size:13px;color:var(--muted);margin-bottom:28px}
+
+/* FORM */
+.form-group{margin-bottom:14px}
+.form-label{
+  font-size:12px;font-weight:500;color:var(--muted);margin-bottom:6px;
+  display:block;letter-spacing:.05em;text-transform:uppercase;
+}
+.form-input{
+  width:100%;padding:13px 16px;border:1px solid var(--border);border-radius:12px;
+  background:var(--card);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--ink);
+  outline:none;transition:border-color .15s,box-shadow .15s;
+}
+.form-input::placeholder{color:#BEB5AC}
+.form-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,150,58,.15)}
+textarea.form-input{resize:vertical;min-height:80px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.btn-primary{
+  width:100%;padding:15px;background:var(--ink);color:var(--cream);border:none;
+  border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;
+  cursor:pointer;margin-top:8px;transition:background .15s,transform .1s;letter-spacing:.02em;
+}
+.btn-primary:hover{background:#2C241E}
+.btn-primary:active{transform:scale(.99)}
+.btn-primary:disabled{opacity:.55;cursor:not-allowed}
+.btn-outline{
+  width:100%;padding:14px;background:transparent;color:var(--ink);
+  border:1px solid var(--border);border-radius:12px;
+  font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;cursor:pointer;
+  transition:background .15s,border-color .15s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-outline:hover{background:var(--sand);border-color:var(--muted)}
+
+/* STEPPER */
+.stepper-wrap{display:flex;flex-direction:row;gap:0;margin-bottom:32px}
+.stepper-track{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:48px;margin-right:16px}
+.step-circle{
+  width:48px;height:48px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:16px;
+  border:3px solid var(--border);background:var(--card);color:var(--muted);
+  transition:border-color .4s,background .4s,color .4s,transform .35s;
+  position:relative;z-index:1;font-family:'DM Sans',sans-serif;
+}
+.step-circle.active{border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 5px rgba(201,150,58,.14)}
+.step-circle.done{border-color:var(--green);background:var(--green);color:#fff;transform:scale(1.08)}
+.stepper-bar{width:4px;flex:1;min-height:64px;background:var(--border);border-radius:2px;position:relative;overflow:hidden;margin:0}
+.stepper-bar-fill{position:absolute;top:0;left:0;right:0;height:0%;background:linear-gradient(to bottom,var(--green),#5CB88A);transition:height .55s cubic-bezier(.4,0,.2,1);border-radius:2px}
+.stepper-bar.filled .stepper-bar-fill{height:100%}
+.stepper-labels{display:flex;flex-direction:column;justify-content:space-between;padding:8px 0}
+.step-label-block{display:flex;flex-direction:column}
+.step-label{font-size:14px;font-weight:600;color:var(--ink);line-height:1.3}
+.step-hint{font-size:12px;color:var(--muted);margin-top:2px}
+.step-label.done-label{color:var(--green)}
+.step-panel{display:none}
+.step-panel.active{display:block;animation:fadeUp .3s ease both}
+
+/* MAP */
+.map-wrap{border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);margin-bottom:20px;height:260px}
+.map-wrap>div{height:100%}
+
+/* SEARCH ROW */
+.search-row{display:flex;gap:10px;margin-bottom:20px}
+.search-row .btn-search{
+  flex-shrink:0;padding:13px 20px;background:var(--ink);color:var(--cream);
+  border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;
+  font-weight:500;cursor:pointer;transition:background .15s;white-space:nowrap;
+}
+.search-row .btn-search:hover{background:#2C241E}
+
+/* KITTY CARD */
+.list-label{font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;margin-bottom:12px}
+.kitty-card-btn{
+  width:100%;background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:16px;margin-bottom:10px;
+  display:flex;align-items:center;gap:14px;cursor:pointer;
+  transition:transform .15s,box-shadow .15s,border-color .15s;
+  text-align:left;animation:fadeUp .3s ease both;font-family:'DM Sans',sans-serif;
+}
+.kitty-card-btn:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--golddim)}
+.kitty-avatar{width:44px;height:44px;border-radius:50%;background:var(--sand);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;border:2px solid var(--border)}
+.kitty-info{flex:1;min-width:0}
+.kitty-name{font-size:15px;font-weight:500;margin-bottom:2px;color:var(--ink)}
+.kitty-meta{font-size:12px;color:var(--muted)}
+.kitty-chevron{font-size:18px;color:var(--muted);flex-shrink:0;font-weight:300}
+
+/* KITTY DETAIL MODAL */
+#modalOverlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(26,20,16,.45);z-index:200;
+  align-items:flex-end;justify-content:center;
+  backdrop-filter:blur(3px);
+}
+#modalOverlay.open{display:flex;animation:bgFade .2s ease}
+@keyframes bgFade{from{opacity:0}to{opacity:1}}
+#modalSheet{
+  background:var(--cream);border-radius:24px 24px 0 0;
+  width:100%;max-width:520px;padding:28px 24px 44px;
+  animation:sheetUp .3s cubic-bezier(.4,0,.2,1);
+  max-height:85vh;overflow-y:auto;
+}
+@keyframes sheetUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px}
+.modal-kitty-name{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:6px}
+.modal-badge{display:inline-block;font-size:11px;font-weight:500;letter-spacing:.04em;background:var(--sand);color:var(--muted);padding:4px 10px;border-radius:100px;margin-bottom:16px}
+.modal-desc{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:20px}
+.modal-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--border);font-size:14px}
+.modal-icon{font-size:18px;flex-shrink:0;width:28px;text-align:center}
+.modal-val{color:var(--ink);font-weight:500;flex:1}
+.modal-key{color:var(--muted);font-size:12px;flex-shrink:0}
+.btn-modal-close{width:100%;margin-top:24px;padding:14px;background:var(--ink);color:var(--cream);border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;cursor:pointer;transition:background .15s}
+.btn-modal-close:hover{background:#2C241E}
+
+/* REMOVE SECTION */
+.info-box{background:#FFF8ED;border:1px solid #F5DFA8;border-radius:12px;padding:14px 16px;font-size:13px;color:#7A5C1E;margin-bottom:20px;line-height:1.5}
+.remove-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px;animation:fadeUp .3s ease both}
+.remove-card-top{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.remove-pwd-row{display:flex;gap:10px}
+.btn-confirm-delete{flex-shrink:0;padding:13px 16px;background:var(--rust);color:#fff;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s;white-space:nowrap}
+.btn-confirm-delete:hover{background:#A8432A}
+
+/* EMPTY / TOAST */
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-state .empty-icon{font-size:40px;margin-bottom:12px}
+.empty-state p{font-size:14px}
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:var(--cream);padding:12px 22px;border-radius:100px;font-size:14px;font-weight:500;z-index:999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap}
+#toast.show{transform:translateX(-50%) translateY(0)}
+.divider{height:1px;background:var(--border);margin:20px 0}
+
+/* ══════════════════════════════════════
+   CHATBOT
+══════════════════════════════════════ */
+#chatFab{
+  position:fixed;bottom:28px;right:24px;z-index:300;
+  width:56px;height:56px;border-radius:50%;
+  background:var(--gold);color:var(--ink);
+  border:none;font-size:24px;cursor:pointer;
+  box-shadow:0 4px 20px rgba(201,150,58,.4);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .2s,box-shadow .2s,background .2s;
+}
+#chatFab:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(201,150,58,.5);background:var(--golddim)}
+#chatFab .fab-badge{
+  position:absolute;top:-3px;right:-3px;
+  width:16px;height:16px;border-radius:50%;
+  background:var(--rust);border:2px solid var(--cream);
+  display:none;
+}
+#chatFab .fab-badge.show{display:block}
+
+#chatPanel{
+  position:fixed;bottom:96px;right:24px;z-index:300;
+  width:min(360px,calc(100vw - 32px));
+  background:var(--cream);border:1px solid var(--border);
+  border-radius:20px;box-shadow:0 8px 40px rgba(26,20,16,.18);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  max-height:calc(100vh - 130px);
+  transform:scale(.92) translateY(16px);opacity:0;
+  pointer-events:none;
+  transition:transform .25s cubic-bezier(.34,1.3,.64,1),opacity .2s ease;
+}
+#chatPanel.open{transform:scale(1) translateY(0);opacity:1;pointer-events:all}
+
+.chat-header{
+  background:var(--ink);color:var(--cream);
+  padding:16px 18px 14px;
+  display:flex;align-items:center;gap:12px;flex-shrink:0;
+}
+.chat-header-avatar{
+  width:36px;height:36px;border-radius:50%;
+  background:var(--gold);display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;
+}
+.chat-header-info{flex:1}
+.chat-header-name{font-size:14px;font-weight:600}
+.chat-header-status{font-size:11px;color:rgba(250,247,242,.5);display:flex;align-items:center;gap:4px}
+.chat-header-status::before{content:'';width:6px;height:6px;border-radius:50%;background:#4CAF50;display:inline-block}
+.chat-close{background:none;border:none;color:rgba(250,247,242,.6);font-size:20px;cursor:pointer;padding:4px;line-height:1;transition:color .15s}
+.chat-close:hover{color:var(--cream)}
+
+.chat-messages{
+  flex:1;overflow-y:auto;padding:16px;
+  display:flex;flex-direction:column;gap:10px;
+  min-height:200px;max-height:400px;
+}
+.chat-messages::-webkit-scrollbar{width:4px}
+.chat-messages::-webkit-scrollbar-track{background:transparent}
+.chat-messages::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+.msg{display:flex;flex-direction:column;animation:fadeUp .2s ease both}
+.msg.user{align-items:flex-end}
+.msg.bot{align-items:flex-start}
+
+.msg-bubble{
+  max-width:85%;padding:10px 14px;border-radius:16px;
+  font-size:13.5px;line-height:1.5;
+}
+.msg.user .msg-bubble{
+  background:var(--ink);color:var(--cream);
+  border-bottom-right-radius:4px;
+}
+.msg.bot .msg-bubble{
+  background:var(--card);color:var(--ink);
+  border:1px solid var(--border);
+  border-bottom-left-radius:4px;
+}
+.msg-time{font-size:10px;color:var(--muted);margin-top:3px;padding:0 2px}
+
+/* Typing indicator */
+.typing-indicator{display:flex;align-items:center;gap:4px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:16px;border-bottom-left-radius:4px;width:fit-content}
+.typing-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:typingBounce 1.2s infinite ease-in-out}
+.typing-dot:nth-child(2){animation-delay:.2s}
+.typing-dot:nth-child(3){animation-delay:.4s}
+@keyframes typingBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+
+/* Quick replies */
+.quick-replies{
+  display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 12px;flex-shrink:0;
+}
+.qr-btn{
+  background:var(--sand);border:1px solid var(--border);border-radius:100px;
+  padding:6px 12px;font-size:12px;font-weight:500;color:var(--ink);
+  cursor:pointer;font-family:'DM Sans',sans-serif;
+  transition:background .15s,border-color .15s;white-space:nowrap;
+}
+.qr-btn:hover{background:var(--golddim);border-color:var(--gold)}
+
+.chat-input-row{
+  display:flex;gap:8px;padding:12px 14px;
+  border-top:1px solid var(--border);flex-shrink:0;background:var(--cream);
+}
+#chatInput{
+  flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:100px;
+  background:var(--card);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);
+  outline:none;transition:border-color .15s,box-shadow .15s;
+}
+#chatInput:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,150,58,.15)}
+#chatInput::placeholder{color:#BEB5AC}
+#chatSendBtn{
+  width:38px;height:38px;border-radius:50%;background:var(--gold);color:var(--ink);
+  border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:background .15s,transform .15s;
+}
+#chatSendBtn:hover{background:var(--golddim);transform:scale(1.08)}
+
+/* Keyboard hint pill */
+.kb-hint{
+  font-size:10px;color:var(--muted);text-align:center;
+  padding:4px 0 8px;letter-spacing:.03em;
+}
+kbd{
+  display:inline-block;padding:1px 5px;border:1px solid var(--border);
+  border-radius:4px;font-size:10px;font-family:'DM Sans',sans-serif;
+  background:var(--sand);color:var(--muted);
+}
+</style>
+</head>
+<body>
+
+<!-- LANDING -->
+<div id="landing">
+  <div class="landing-inner">
+    <span class="landing-emoji">🪷</span>
+    <h1 class="landing-title">Kitty<br><span>Finder</span> Pro</h1>
+    <p class="landing-sub">Find your kitty party circle, instantly.</p>
+    <button class="btn-enter" id="enterBtn">Get Started</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo"><span>🪷</span> Kitty Finder</div>
+    <button id="backBtn">← Back</button>
+  </div>
+
+  <!-- HOME -->
+  <div id="home" class="section active">
+    <p class="home-greeting">Good day 👋</p>
+    <p class="home-sub">What would you like to do?</p>
+    <div class="action-grid">
+      <div class="action-card" id="card-near">
+        <span class="action-icon">📍</span>
+        <div class="action-label">Nearby</div>
+        <div class="action-desc">Find members near you</div>
+      </div>
+      <div class="action-card" id="card-city">
+        <span class="action-icon">🏙️</span>
+        <div class="action-label">By City</div>
+        <div class="action-desc">Search any location</div>
+      </div>
+      <div class="action-card wide" id="card-create">
+        <span class="action-icon">✨</span>
+        <div class="action-label">Add Yourself</div>
+        <div class="action-desc">Join the kitty party network</div>
+      </div>
+      <div class="action-card wide" id="card-remove">
+        <span class="action-icon">🗑️</span>
+        <div class="action-label">Remove My Kitty</div>
+        <div class="action-desc">Delete your listing (password required)</div>
+      </div>
+    </div>
+    <div class="kb-hint"><kbd>↑</kbd><kbd>↓</kbd> navigate cards &nbsp;·&nbsp; <kbd>Enter</kbd> select &nbsp;·&nbsp; <kbd>C</kbd> open chat</div>
+  </div>
+
+  <!-- CREATE -->
+  <div id="create" class="section">
+    <h2 class="section-title">Join the Network</h2>
+    <p class="section-sub">Two quick steps and you're on the map.</p>
+    <div class="stepper-wrap">
+      <div class="stepper-track">
+        <div class="step-circle active" id="circle1">1</div>
+        <div class="stepper-bar" id="stepBar"><div class="stepper-bar-fill"></div></div>
+        <div class="step-circle" id="circle2">2</div>
+      </div>
+      <div class="stepper-labels">
+        <div class="step-label-block">
+          <div class="step-label" id="label1">Your Profile</div>
+          <div class="step-hint">Name, contact &amp; city</div>
+        </div>
+        <div class="step-label-block">
+          <div class="step-label" id="label2">Kitty Details</div>
+          <div class="step-hint">Name, description &amp; password</div>
+        </div>
+      </div>
+    </div>
+    <div class="step-panel active" id="panel1">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">First Name</label>
+          <input class="form-input" id="fname" placeholder="Priya" autocomplete="given-name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Last Name</label>
+          <input class="form-input" id="lname" placeholder="Sharma" autocomplete="family-name">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" id="email" type="email" placeholder="priya@example.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone</label>
+        <input class="form-input" id="phone" type="tel" placeholder="+91 98765 43210" autocomplete="tel">
+      </div>
+      <div class="form-group">
+        <label class="form-label">City</label>
+        <input class="form-input" id="cityInput" placeholder="Mumbai">
+      </div>
+      <button class="btn-primary" id="nextStepBtn">Continue to Step 2 →</button>
+      <div class="kb-hint" style="margin-top:10px"><kbd>Enter</kbd> to continue</div>
+    </div>
+    <div class="step-panel" id="panel2">
+      <div class="form-group">
+        <label class="form-label">Kitty Name</label>
+        <input class="form-input" id="kittyName" placeholder="e.g. Saraswati Ladies Kitty">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-input" id="kittyDesc" placeholder="Tell others about your kitty — meeting day, theme, how to join…"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">🔒 Kitty Password</label>
+        <input class="form-input" id="kittyPass" type="password" placeholder="Only you know this — needed to remove your listing">
+      </div>
+      <div class="info-box">⚠️ Remember this password — it cannot be recovered. You will need it if you ever want to remove your kitty listing.</div>
+      <button class="btn-primary" id="saveBtn">Save &amp; Join 🪷</button>
+    </div>
+  </div>
+
+  <!-- NEARBY -->
+  <div id="near" class="section">
+    <h2 class="section-title">Nearby Members</h2>
+    <p class="section-sub">Members registered close to your location.</p>
+    <button class="btn-outline" id="loadNearBtn">📍 Load Nearby Members</button>
+    <div class="divider"></div>
+    <div class="map-wrap" id="mapWrap1" style="display:none"><div id="map"></div></div>
+    <div id="list"></div>
+  </div>
+
+  <!-- CITY SEARCH -->
+  <div id="city" class="section">
+    <h2 class="section-title">Search by City</h2>
+    <p class="section-sub">Find kitty party members in any city.</p>
+    <div class="search-row">
+      <input class="form-input" id="searchCityInput" placeholder="e.g. Nashik, Pune, Mumbai…">
+      <button class="btn-search" id="citySearchBtn">Search</button>
+    </div>
+    <div class="kb-hint" style="margin-bottom:12px"><kbd>Enter</kbd> to search</div>
+    <div class="map-wrap" id="mapWrap2" style="display:none"><div id="map2"></div></div>
+    <div id="list2"></div>
+  </div>
+
+  <!-- REMOVE -->
+  <div id="remove" class="section">
+    <h2 class="section-title">Remove My Kitty</h2>
+    <p class="section-sub">Find your entry and verify with your kitty password.</p>
+    <div class="info-box">🔒 Enter your details to find your listing. Your kitty password will be required to confirm deletion — only you know it.</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">First Name</label>
+        <input class="form-input" id="r-fname" placeholder="Priya">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Last Name</label>
+        <input class="form-input" id="r-lname" placeholder="Sharma">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">City</label>
+      <input class="form-input" id="r-city" placeholder="Mumbai">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Kitty Name</label>
+      <input class="form-input" id="r-kittyname" placeholder="Saraswati Ladies Kitty">
+    </div>
+    <button class="btn-primary" id="findMyEntryBtn">🔍 Find My Kitty</button>
+    <div class="kb-hint" style="margin-top:10px"><kbd>Enter</kbd> to search</div>
+    <div id="removeResults" style="margin-top:20px"></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modalOverlay">
+  <div id="modalSheet">
+    <div class="modal-handle"></div>
+    <div class="modal-kitty-name" id="modal-kittyName">—</div>
+    <span class="modal-badge" id="modal-city">📍 —</span>
+    <p class="modal-desc" id="modal-desc">—</p>
+    <div class="modal-row">
+      <span class="modal-icon">👤</span>
+      <span class="modal-val" id="modal-host">—</span>
+      <span class="modal-key">Host</span>
+    </div>
+    <div class="modal-row">
+      <span class="modal-icon">📞</span>
+      <span class="modal-val" id="modal-phone">—</span>
+      <span class="modal-key">Phone</span>
+    </div>
+    <div class="modal-row">
+      <span class="modal-icon">✉️</span>
+      <span class="modal-val" id="modal-email">—</span>
+      <span class="modal-key">Email</span>
+    </div>
+    <button class="btn-modal-close" id="modalClose">Close</button>
+    <div class="kb-hint" style="margin-top:10px"><kbd>Esc</kbd> to close</div>
+  </div>
+</div>
+
+<!-- CHATBOT FAB -->
+<button id="chatFab" title="Chat with Kitty Assistant (press C)">
+  🪷
+  <div class="fab-badge" id="fabBadge"></div>
+</button>
+
+<!-- CHAT PANEL -->
+<div id="chatPanel">
+  <div class="chat-header">
+    <div class="chat-header-avatar">🪷</div>
+    <div class="chat-header-info">
+      <div class="chat-header-name">Kitty Assistant</div>
+      <div class="chat-header-status">Online — ask me anything!</div>
+    </div>
+    <button class="chat-close" id="chatClose" title="Close (Esc)">✕</button>
+  </div>
+
+  <div class="chat-messages" id="chatMessages"></div>
+
+  <div class="quick-replies" id="quickReplies">
+    <button class="qr-btn" data-q="What are popular kitty party themes?">Popular themes</button>
+    <button class="qr-btn" data-q="How do I run a kitty party?">How to run one</button>
+    <button class="qr-btn" data-q="Ideas for kitty party decorations">Decoration ideas</button>
+    <button class="qr-btn" data-q="What games can we play at a kitty party?">Games to play</button>
+    <button class="qr-btn" data-q="What food should I serve at a kitty party?">Food ideas</button>
+  </div>
+
+  <div class="chat-input-row">
+    <input id="chatInput" placeholder="Ask about kitty themes…" autocomplete="off">
+    <button id="chatSendBtn" title="Send (Enter)">➤</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script type="module">
+import { initializeApp }                                               from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc }  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig={
+  apiKey:"AIzaSyAaKTIpULjVw9VO4PiDhlpSCWy2XQIR87Y",
+  authDomain:"kitty-project-71f46.firebaseapp.com",
+  projectId:"kitty-project-71f46",
+  storageBucket:"kitty-project-71f46.firebasestorage.app",
+  messagingSenderId:"615711372253",
+  appId:"1:615711372253:web:058d1aca0ddaf6a2193c34",
+  measurementId:"G-TX3PEPNQS0"
+};
+const fb=initializeApp(firebaseConfig);
+const db=getFirestore(fb);
+
+/* TOAST */
+function toast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg;t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2800);
+}
+
+/* ENTER */
+document.getElementById("enterBtn").addEventListener("click",()=>{
+  document.getElementById("landing").style.display="none";
+  document.getElementById("app").style.display="block";
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&document.getElementById("landing").style.display!=="none"){
+    document.getElementById("enterBtn").click();
+  }
+});
+
+/* NAV */
+function nav(id){
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  const bb=document.getElementById("backBtn");
+  id==="home"?bb.classList.remove("visible"):bb.classList.add("visible");
+  if(id==="near")  setTimeout(()=>map1&&map1.invalidateSize(),120);
+  if(id==="city")  setTimeout(()=>map2&&map2.invalidateSize(),120);
+  if(id!=="create") resetStepper();
+}
+document.getElementById("backBtn").addEventListener("click",()=>nav("home"));
+document.getElementById("card-near").addEventListener("click",()=>nav("near"));
+document.getElementById("card-city").addEventListener("click",()=>nav("city"));
+document.getElementById("card-create").addEventListener("click",()=>nav("create"));
+document.getElementById("card-remove").addEventListener("click",()=>nav("remove"));
+
+/* GEOCODE */
+async function geocode(city){
+  const r=await fetch(
+    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`,
+    {headers:{"Accept-Language":"en"}});
+  const d=await r.json();
+  if(!d||!d.length)return null;
+  return{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)};
+}
+
+/* SHA-256 */
+async function sha256(str){
+  const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+/* STEPPER */
+function resetStepper(){
+  const c1=document.getElementById("circle1");
+  const c2=document.getElementById("circle2");
+  c1.className="step-circle active"; c1.textContent="1";
+  c2.className="step-circle";        c2.textContent="2";
+  document.getElementById("label1").className="step-label";
+  document.getElementById("label2").className="step-label";
+  document.getElementById("stepBar").classList.remove("filled");
+  document.getElementById("panel1").classList.add("active");
+  document.getElementById("panel2").classList.remove("active");
+}
+function goToStep2(){
+  const c1=document.getElementById("circle1");
+  c1.className="step-circle done"; c1.textContent="✓";
+  document.getElementById("label1").className="step-label done-label";
+  document.getElementById("stepBar").classList.add("filled");
+  const c2=document.getElementById("circle2");
+  c2.className="step-circle active";
+  document.getElementById("label2").className="step-label";
+  document.getElementById("panel1").classList.remove("active");
+  document.getElementById("panel2").classList.add("active");
+}
+
+document.getElementById("nextStepBtn").addEventListener("click",()=>{
+  const fname=document.getElementById("fname").value.trim();
+  const city=document.getElementById("cityInput").value.trim();
+  if(!fname||!city){toast("⚠️ Please enter your name and city.");return;}
+  goToStep2();
+});
+
+document.getElementById("saveBtn").addEventListener("click",async()=>{
+  const fname    =document.getElementById("fname").value.trim();
+  const lname    =document.getElementById("lname").value.trim();
+  const email    =document.getElementById("email").value.trim();
+  const phone    =document.getElementById("phone").value.trim();
+  const city     =document.getElementById("cityInput").value.trim();
+  const kittyName=document.getElementById("kittyName").value.trim();
+  const kittyDesc=document.getElementById("kittyDesc").value.trim();
+  const kittyPass=document.getElementById("kittyPass").value;
+  if(!kittyName){toast("⚠️ Please enter a kitty name.");return;}
+  if(!kittyPass||kittyPass.length<4){toast("⚠️ Password must be at least 4 characters.");return;}
+  const btn=document.getElementById("saveBtn");
+  btn.textContent="Finding city on map…";btn.disabled=true;
+  try{
+    const coords=await geocode(city);
+    if(!coords){
+      toast("❌ Couldn't find that city. Check spelling.");
+      btn.textContent="Save & Join 🪷";btn.disabled=false;return;
+    }
+    const passHash=await sha256(kittyPass);
+    await addDoc(collection(db,"kitties"),{fname,lname,email,phone,city,kittyName,kittyDesc,passHash,lat:coords.lat,lng:coords.lng});
+    toast("🎉 Your kitty is on the map!");
+    ["fname","lname","email","phone","cityInput","kittyName","kittyDesc","kittyPass"].forEach(id=>document.getElementById(id).value="");
+    nav("home");
+  }catch(e){toast("❌ Save failed. Check Firebase config.");console.error(e);}
+  finally{btn.textContent="Save & Join 🪷";btn.disabled=false;}
+});
+
+/* MAPS */
+let map1,map2;
+function initMap1(lat,lng){
+  if(!map1){
+    document.getElementById("mapWrap1").style.display="block";
+    map1=L.map("map").setView([lat,lng],11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map1);
+  }
+}
+function initMap2(){
+  if(!map2){
+    document.getElementById("mapWrap2").style.display="block";
+    map2=L.map("map2").setView([20,78],5);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map2);
+  }
+}
+
+/* NEARBY */
+document.getElementById("loadNearBtn").addEventListener("click",async()=>{
+  const btn=document.getElementById("loadNearBtn");
+  const list=document.getElementById("list");
+  btn.textContent="Locating you…";btn.disabled=true;
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    initMap1(pos.coords.latitude,pos.coords.longitude);
+    setTimeout(()=>map1&&map1.invalidateSize(),150);
+    L.circleMarker([pos.coords.latitude,pos.coords.longitude],
+      {radius:8,fillColor:"#C9963A",color:"#fff",weight:2,fillOpacity:1})
+      .addTo(map1).bindPopup("You are here");
+    list.innerHTML="";
+    try{
+      const snap=await getDocs(collection(db,"kitties"));
+      if(snap.empty){list.innerHTML=emptyHTML("No kitties yet. Be the first!");}
+      else{
+        const lbl=document.createElement("p");
+        lbl.className="list-label";
+        lbl.textContent=`${snap.size} kitty${snap.size!==1?"s":""} found`;
+        list.appendChild(lbl);
+        snap.forEach(ds=>{
+          const k={id:ds.id,...ds.data()};
+          if(k.lat&&k.lng) L.marker([k.lat,k.lng]).addTo(map1).bindPopup(`<b>${k.kittyName||k.fname}</b><br>${k.city}`);
+          list.appendChild(kittyBtn(k));
+        });
+      }
+    }catch(e){list.innerHTML=emptyHTML("❌ Could not load data.");console.error(e);}
+    btn.textContent="🔄 Refresh";btn.disabled=false;
+  },()=>{
+    toast("📍 Location access denied.");
+    btn.textContent="📍 Load Nearby Members";btn.disabled=false;
+  });
+});
+
+/* CITY SEARCH — also triggered by Enter */
+function doCitySearch(){
+  document.getElementById("citySearchBtn").click();
+}
+document.getElementById("searchCityInput").addEventListener("keydown",e=>{
+  if(e.key==="Enter") doCitySearch();
+});
+document.getElementById("citySearchBtn").addEventListener("click",async()=>{
+  const q=document.getElementById("searchCityInput").value.trim();
+  const list2=document.getElementById("list2");
+  if(!q){toast("Please enter a city name.");return;}
+  list2.innerHTML=`<div class="empty-state"><p>Searching…</p></div>`;
+  initMap2();setTimeout(()=>map2&&map2.invalidateSize(),150);
+  try{
+    const snap=await getDocs(collection(db,"kitties"));
+    list2.innerHTML="";
+    const matches=[];
+    snap.forEach(ds=>{
+      const k={id:ds.id,...ds.data()};
+      if(k.city&&k.city.toLowerCase()===q.toLowerCase()) matches.push(k);
+    });
+    if(!matches.length){list2.innerHTML=emptyHTML(`No kitties found in "${q}".`);}
+    else{
+      const lbl=document.createElement("p");
+      lbl.className="list-label";
+      lbl.textContent=`${matches.length} kitty${matches.length!==1?"s":""} in ${q}`;
+      list2.appendChild(lbl);
+      const bounds=[];
+      matches.forEach(k=>{
+        if(k.lat&&k.lng){
+          L.marker([k.lat,k.lng]).addTo(map2).bindPopup(`<b>${k.kittyName||k.fname}</b><br>${k.city}`);
+          bounds.push([k.lat,k.lng]);
+        }
+        list2.appendChild(kittyBtn(k));
+      });
+      if(bounds.length)map2.fitBounds(bounds,{padding:[30,30]});
+    }
+  }catch(e){list2.innerHTML=emptyHTML("❌ Could not load data.");console.error(e);}
+});
+
+/* REMOVE — Enter key */
+document.getElementById("r-kittyname").addEventListener("keydown",e=>{
+  if(e.key==="Enter") document.getElementById("findMyEntryBtn").click();
+});
+document.getElementById("findMyEntryBtn").addEventListener("click",async()=>{
+  const fname =document.getElementById("r-fname").value.trim().toLowerCase();
+  const lname =document.getElementById("r-lname").value.trim().toLowerCase();
+  const city  =document.getElementById("r-city").value.trim().toLowerCase();
+  const kname =document.getElementById("r-kittyname").value.trim().toLowerCase();
+  const res   =document.getElementById("removeResults");
+  if(!fname||!city||!kname){toast("⚠️ Fill in name, city and kitty name.");return;}
+  res.innerHTML=`<div class="empty-state"><p>Searching…</p></div>`;
+  try{
+    const snap=await getDocs(collection(db,"kitties"));
+    const matches=[];
+    snap.forEach(ds=>{
+      const k=ds.data();
+      if(
+        k.fname&&k.fname.toLowerCase()===fname&&
+        (!lname||(k.lname&&k.lname.toLowerCase()===lname))&&
+        k.city&&k.city.toLowerCase()===city&&
+        k.kittyName&&k.kittyName.toLowerCase()===kname
+      ) matches.push({id:ds.id,...k});
+    });
+    res.innerHTML="";
+    if(!matches.length){res.innerHTML=emptyHTML("No matching kitty found. Check details.");}
+    else{
+      const lbl=document.createElement("p");
+      lbl.className="list-label";
+      lbl.textContent=`${matches.length} match found`;
+      res.appendChild(lbl);
+      matches.forEach(k=>res.appendChild(removeCard(k)));
+    }
+  }catch(e){res.innerHTML=emptyHTML("❌ Error. Check Firebase config.");console.error(e);}
+});
+
+/* Form Enter key shortcuts in step 1 */
+["fname","lname","email","phone","cityInput"].forEach(id=>{
+  document.getElementById(id).addEventListener("keydown",e=>{
+    if(e.key==="Enter") document.getElementById("nextStepBtn").click();
+  });
+});
+/* Step 2 Enter */
+["kittyName","kittyPass"].forEach(id=>{
+  document.getElementById(id).addEventListener("keydown",e=>{
+    if(e.key==="Enter") document.getElementById("saveBtn").click();
+  });
+});
+
+function removeCard(k){
+  const div=document.createElement("div");
+  div.className="remove-card";
+  const em=EMOJIS[Math.floor(Math.random()*EMOJIS.length)];
+  div.innerHTML=`
+    <div class="remove-card-top">
+      <div class="kitty-avatar">${em}</div>
+      <div class="kitty-info">
+        <div class="kitty-name">${k.kittyName||"Kitty"}</div>
+        <div class="kitty-meta">📍 ${k.city||"Unknown"} · ${k.fname} ${k.lname||""}</div>
+      </div>
+    </div>
+    <div class="remove-pwd-row">
+      <input class="form-input" type="password" placeholder="Enter kitty password to confirm" id="pwd-${k.id}">
+      <button class="btn-confirm-delete">🗑 Delete</button>
+    </div>
+  `;
+  const pwdInput=div.querySelector(`#pwd-${k.id}`);
+  pwdInput.addEventListener("keydown",async e=>{
+    if(e.key==="Enter") div.querySelector(".btn-confirm-delete").click();
+  });
+  div.querySelector(".btn-confirm-delete").addEventListener("click",async()=>{
+    const pwd=document.getElementById(`pwd-${k.id}`).value;
+    if(!pwd){toast("⚠️ Enter your kitty password.");return;}
+    const h=await sha256(pwd);
+    if(h!==k.passHash){toast("❌ Wrong password. Try again.");return;}
+    try{
+      await deleteDoc(doc(db,"kitties",k.id));
+      div.style.cssText="transition:opacity .3s,transform .3s;opacity:0;transform:translateX(20px)";
+      setTimeout(()=>div.remove(),350);
+      toast("✅ Kitty removed from the network.");
+    }catch(e){toast("❌ Delete failed.");console.error(e);}
+  });
+  return div;
+}
+
+/* MODAL */
+const overlay=document.getElementById("modalOverlay");
+document.getElementById("modalClose").addEventListener("click",()=>overlay.classList.remove("open"));
+overlay.addEventListener("click",e=>{if(e.target===overlay)overlay.classList.remove("open");});
+
+function openModal(k){
+  document.getElementById("modal-kittyName").textContent=k.kittyName||"Kitty";
+  document.getElementById("modal-city").textContent=`📍 ${k.city||"Unknown"}`;
+  document.getElementById("modal-desc").textContent=k.kittyDesc||"No description provided.";
+  document.getElementById("modal-host").textContent=`${k.fname||""} ${k.lname||""}`.trim()||"—";
+  document.getElementById("modal-phone").textContent=k.phone||"—";
+  document.getElementById("modal-email").textContent=k.email||"—";
+  overlay.classList.add("open");
+}
+
+/* HELPERS */
+const EMOJIS=["🌸","🌺","🌻","🌷","🪷","💐","🌹","🌼"];
+function kittyBtn(k){
+  const btn=document.createElement("button");
+  btn.className="kitty-card-btn";
+  const em=EMOJIS[Math.floor(Math.random()*EMOJIS.length)];
+  btn.innerHTML=`
+    <div class="kitty-avatar">${em}</div>
+    <div class="kitty-info">
+      <div class="kitty-name">${k.kittyName||k.fname||"Kitty"}</div>
+      <div class="kitty-meta">📍 ${k.city||"Unknown"} · ${k.fname||""}${k.lname?" "+k.lname:""}</div>
+    </div>
+    <span class="kitty-chevron">›</span>
+  `;
+  btn.addEventListener("click",()=>openModal(k));
+  return btn;
+}
+function emptyHTML(msg){
+  return`<div class="empty-state"><div class="empty-icon">🪷</div><p>${msg}</p></div>`;
+}
+
+/* ══════════════════════════════════════
+   CHATBOT
+══════════════════════════════════════ */
+const chatFab    = document.getElementById("chatFab");
+const chatPanel  = document.getElementById("chatPanel");
+const chatClose  = document.getElementById("chatClose");
+const chatInput  = document.getElementById("chatInput");
+const chatSendBtn= document.getElementById("chatSendBtn");
+const chatMsgs   = document.getElementById("chatMessages");
+const fabBadge   = document.getElementById("fabBadge");
+
+let chatOpen = false;
+let chatHistory = []; // {role, content}[]
+let hasUnread = false;
+
+const CHAT_SYSTEM = `You are "Kitty Assistant", a warm, knowledgeable, and enthusiastic helper for kitty party hosts and members in India. You know everything about kitty parties: themes (Bollywood, Rajasthani, Navratri, Saree, Mehendi, Tropical, Retro, Garden Tea Party, Lohri, Diwali, Western, Fusion, etc.), decoration ideas, game ideas, menu suggestions, how to organise a kitty rotation, tips for finding members, rules, etiquette, budgeting, gifts, and more.
+
+Respond in a friendly, conversational tone. Keep answers concise but helpful — usually 2-5 sentences. Use occasional relevant emojis. If the user asks something unrelated to kitty parties, gently redirect them by saying you specialise in kitty party topics. Respond only in the language the user writes in (Hindi or English).`;
+
+function timeNow(){
+  const d=new Date();
+  return d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+}
+
+function appendMsg(role, text){
+  const div=document.createElement("div");
+  div.className=`msg ${role}`;
+  const bubble=document.createElement("div");
+  bubble.className="msg-bubble";
+  bubble.textContent=text;
+  const time=document.createElement("div");
+  time.className="msg-time";
+  time.textContent=timeNow();
+  div.appendChild(bubble);
+  div.appendChild(time);
+  chatMsgs.appendChild(div);
+  chatMsgs.scrollTop=chatMsgs.scrollHeight;
+  return div;
+}
+
+function showTyping(){
+  const div=document.createElement("div");
+  div.className="msg bot";
+  div.id="typingIndicator";
+  const indicator=document.createElement("div");
+  indicator.className="typing-indicator";
+  indicator.innerHTML=`<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>`;
+  div.appendChild(indicator);
+  chatMsgs.appendChild(div);
+  chatMsgs.scrollTop=chatMsgs.scrollHeight;
+}
+function hideTyping(){
+  const el=document.getElementById("typingIndicator");
+  if(el) el.remove();
+}
+
+async function sendChat(userText){
+  if(!userText.trim()) return;
+  chatHistory.push({role:"user",content:userText});
+  appendMsg("user", userText);
+  chatInput.value="";
+  showTyping();
+
+  // hide quick replies after first real interaction
+  document.getElementById("quickReplies").style.display="none";
+
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"claude-sonnet-4-20250514",
+        max_tokens:600,
+        system: CHAT_SYSTEM,
+        messages: chatHistory
+      })
+    });
+    const data=await res.json();
+    const reply=data.content?.map(c=>c.text||"").join("") || "Sorry, I couldn't get a response right now. Please try again!";
+    hideTyping();
+    chatHistory.push({role:"assistant",content:reply});
+    appendMsg("bot", reply);
+
+    // show badge if panel is closed
+    if(!chatOpen){
+      hasUnread=true;
+      fabBadge.classList.add("show");
+    }
+  }catch(err){
+    hideTyping();
+    appendMsg("bot","Oops! Something went wrong. Please check your connection and try again. 🌸");
+    console.error(err);
+  }
+}
+
+// Welcome message on first open
+let welcomed = false;
+function openChat(){
+  chatOpen=true;
+  chatPanel.classList.add("open");
+  hasUnread=false;
+  fabBadge.classList.remove("show");
+  if(!welcomed){
+    welcomed=true;
+    setTimeout(()=>{
+      appendMsg("bot","Namaste! 🪷 I'm your Kitty Assistant. Ask me anything about kitty party themes, decorations, games, food, or how to find members near you!");
+    },300);
+  }
+  setTimeout(()=>chatInput.focus(),350);
+}
+function closeChat(){
+  chatOpen=false;
+  chatPanel.classList.remove("open");
+}
+
+chatFab.addEventListener("click",()=>{ chatOpen ? closeChat() : openChat(); });
+chatClose.addEventListener("click",closeChat);
+
+chatSendBtn.addEventListener("click",()=>sendChat(chatInput.value));
+chatInput.addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendChat(chatInput.value); }
+});
+
+// Quick reply buttons
+document.querySelectorAll(".qr-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>sendChat(btn.dataset.q));
+});
+
+/* ══════════════════════════════════════
+   GLOBAL KEYBOARD SHORTCUTS
+══════════════════════════════════════ */
+document.addEventListener("keydown",e=>{
+  const tag=document.activeElement.tagName.toLowerCase();
+  const inInput=["input","textarea"].includes(tag);
+
+  // Esc: close modal or chat
+  if(e.key==="Escape"){
+    if(overlay.classList.contains("open")){ overlay.classList.remove("open"); return; }
+    if(chatOpen){ closeChat(); return; }
+  }
+
+  // C: toggle chat (when not typing in a field)
+  if(e.key==="c"&&!inInput&&!e.ctrlKey&&!e.metaKey){
+    chatOpen ? closeChat() : openChat();
+    return;
+  }
+
+  // Backspace / B: go back (when not in an input)
+  if((e.key==="Backspace"||e.key==="b")&&!inInput){
+    const bb=document.getElementById("backBtn");
+    if(bb.classList.contains("visible")){ nav("home"); }
+  }
+});
+
+</script>
+</body>
+</html>
